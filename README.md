@@ -7,6 +7,7 @@ A simple Neovim plugin for interacting with Amazon Q Chat in a side window.
 - Open Amazon Q Chat in a side window within Neovim
 - Close the Q Chat window with a simple command
 - Configurable window position and width
+- Automatic login handling when not authenticated
 
 ## Installation
 
@@ -29,10 +30,10 @@ Add the following to your Home Manager configuration:
 {
   programs.neovim = {
     # Your existing Neovim configuration...
-    
+
     plugins = [
       # Your existing plugins...
-      
+
       # Add the local QChat plugin
       {
         plugin = pkgs.vimUtils.buildVimPlugin {
@@ -49,7 +50,7 @@ Add the following to your Home Manager configuration:
 
 The plugin provides two commands:
 
-- `:QChatOpen` - Opens a new side window with Q Chat
+- `:QChatOpen` - Opens a new side window with Q Chat (automatically handles login if needed)
 - `:QChatClose` - Closes the Q Chat window and terminates the session
 
 ## Configuration
@@ -60,7 +61,8 @@ You can configure the plugin by setting these variables in your init.lua:
 -- Configure QChat plugin
 require('qchat').setup({
   window_width = 100,  -- Set custom width
-  window_position = 'left'  -- 'left' or 'right'
+  window_position = 'left',  -- 'left' or 'right'
+  login_command = 'q login'  -- Custom login command if needed
 })
 
 -- Key mappings for QChat
