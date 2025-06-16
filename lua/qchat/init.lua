@@ -6,16 +6,15 @@ local M = {}
 local config = {
   window_width = 80,
   window_position = 'right',
-  login_command = 'q login',  -- Command to use for login
-  debug = false  -- Set to true to enable debug messages
+  debug = false -- Set to true to enable debug messages
 }
 
 -- State variables
 local state = {
-  status_buffer = nil,  -- Buffer for status messages
-  term_buffer = nil,    -- Buffer for terminal
-  window = nil,         -- Window ID
-  term_id = nil         -- Terminal job ID
+  status_buffer = nil, -- Buffer for status messages
+  term_buffer = nil,   -- Buffer for terminal
+  window = nil,        -- Window ID
+  term_id = nil        -- Terminal job ID
 }
 
 -- Custom logging function that respects debug setting
@@ -43,34 +42,13 @@ local function update_status(message_lines)
 
   -- Ensure message_lines is a table
   if type(message_lines) == "string" then
-    message_lines = {message_lines}
+    message_lines = { message_lines }
   end
 
   -- Update buffer content
   vim.api.nvim_buf_set_option(state.status_buffer, 'modifiable', true)
   vim.api.nvim_buf_set_lines(state.status_buffer, 0, -1, false, message_lines)
   vim.api.nvim_buf_set_option(state.status_buffer, 'modifiable', false)
-end
-
--- Check if user is logged in to Amazon Q CLI
-function M.check_login()
-  -- Run a command that requires authentication
-  local handle = io.popen("q whoami 2>&1")
-  if not handle then
-    return false, "Failed to execute Q CLI command"
-  end
-
-  local result = handle:read("*a")
-  handle:close()
-
-  -- Check if the output contains an authentication error
-  if result:match("Not logged in") or result:match("authentication") or result:match("log in") then
-    log("Login check failed - " .. result)
-    return false, "Not logged in to Amazon Q CLI"
-  end
-
-  log("Login check passed")
-  return true, "Logged in"
 end
 
 -- Asynchronously check login status
@@ -144,12 +122,12 @@ function M.attempt_login()
 
   -- Clean up buffers
   if state.status_buffer and vim.api.nvim_buf_is_valid(state.status_buffer) then
-    vim.api.nvim_buf_delete(state.status_buffer, {force = true})
+    vim.api.nvim_buf_delete(state.status_buffer, { force = true })
     state.status_buffer = nil
   end
 
   if state.term_buffer and vim.api.nvim_buf_is_valid(state.term_buffer) then
-    vim.api.nvim_buf_delete(state.term_buffer, {force = true})
+    vim.api.nvim_buf_delete(state.term_buffer, { force = true })
     state.term_buffer = nil
   end
 
@@ -178,7 +156,7 @@ function M.attempt_login()
   })
 
   -- Start login process in terminal directly
-  local login_term_id = vim.fn.termopen(config.login_command, {
+  local login_term_id = vim.fn.termopen('q login', {
     on_exit = function(_, exit_code, _)
       log("Login process exited with code " .. exit_code)
       -- Close the login window after completion
@@ -194,7 +172,7 @@ function M.attempt_login()
   })
 
   -- Enter insert mode to interact with login prompt
-  vim.cmd('startinsert')
+  vim.api.nvim_command('startinsert')
 
   return login_term_id ~= 0
 end
@@ -265,12 +243,12 @@ function M.close()
 
   -- Clean up buffers
   if state.status_buffer and vim.api.nvim_buf_is_valid(state.status_buffer) then
-    vim.api.nvim_buf_delete(state.status_buffer, {force = true})
+    vim.api.nvim_buf_delete(state.status_buffer, { force = true })
     state.status_buffer = nil
   end
 
   if state.term_buffer and vim.api.nvim_buf_is_valid(state.term_buffer) then
-    vim.api.nvim_buf_delete(state.term_buffer, {force = true})
+    vim.api.nvim_buf_delete(state.term_buffer, { force = true })
     state.term_buffer = nil
   end
 
@@ -316,10 +294,10 @@ function M.show_login_options()
   -- Set up keymaps for the buffer
   vim.api.nvim_buf_set_keymap(state.status_buffer, 'n', 'l',
     ':lua require("qchat").attempt_login()<CR>',
-    {noremap = true, silent = true})
+    { noremap = true, silent = true })
   vim.api.nvim_buf_set_keymap(state.status_buffer, 'n', 'q',
     ':lua require("qchat").close()<CR>',
-    {noremap = true, silent = true})
+    { noremap = true, silent = true })
 end
 
 -- Start Q Chat session in a new terminal buffer
@@ -345,6 +323,11 @@ function M.start_qchat_session()
   -- Replace the status buffer with the terminal buffer in the window
   if state.window and vim.api.nvim_win_is_valid(state.window) then
     vim.api.nvim_win_set_buf(state.window, state.term_buffer)
+    -- Delete the status buffer since we don't need it anymore
+    if state.status_buffer and vim.api.nvim_buf_is_valid(state.status_buffer) then
+      vim.api.nvim_buf_delete(state.status_buffer, { force = true })
+      state.status_buffer = nil
+    end
   end
 
   -- Start Q Chat in the terminal buffer
