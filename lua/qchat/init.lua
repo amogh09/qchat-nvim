@@ -179,7 +179,7 @@ function M.attempt_login()
 
   -- Start login process in terminal directly
   local login_term_id = vim.fn.termopen(config.login_command, {
-    on_exit = function(job_id, exit_code, event_type)
+    on_exit = function(_, exit_code, _)
       log("Login process exited with code " .. exit_code)
       -- Close the login window after completion
       vim.defer_fn(function()
@@ -349,7 +349,7 @@ function M.start_qchat_session()
 
   -- Start Q Chat in the terminal buffer
   state.term_id = vim.fn.termopen('q chat', {
-    on_exit = function(job_id, exit_code, event_type)
+    on_exit = function(_, exit_code, _)
       state.term_id = nil
       log("Q Chat process exited with code " .. exit_code)
     end
