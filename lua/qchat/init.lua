@@ -6,7 +6,8 @@ local M = {}
 local config = {
   window_width = 80,
   window_position = 'right',
-  login_command = 'q login'  -- Command to use for login
+  login_command = 'q login',  -- Command to use for login
+  debug = false  -- Set to true to enable debug messages
 }
 
 -- State variables
@@ -14,6 +15,23 @@ local state = {
   buffer = nil,
   term_id = nil
 }
+
+-- Custom logging function that respects debug setting
+local function log(message, level)
+  level = level or vim.log.levels.DEBUG
+
+  -- Only show debug messages if debug mode is enabled
+  if level == vim.log.levels.DEBUG and not config.debug then
+    return
+  end
+
+  -- Use silent notification for non-error messages to avoid "Press ENTER" prompts
+  if level < vim.log.levels.ERROR then
+    vim.cmd('echom "[QChat] ' .. message .. '"')
+  else
+    vim.notify("[QChat] " .. message, level)
+  end
+end
 
 -- Check if user is logged in to Amazon Q CLI
 function M.check_login()
@@ -28,17 +46,17 @@ function M.check_login()
 
   -- Check if the output contains an authentication error
   if result:match("Not logged in") or result:match("authentication") or result:match("log in") then
-    vim.notify("QChat: Login check failed - " .. result, vim.log.levels.DEBUG)
+    log("Login check failed - " .. result)
     return false, "Not logged in to Amazon Q CLI"
   end
 
-  vim.notify("QChat: Login check passed", vim.log.levels.DEBUG)
+  log("Login check passed")
   return true, "Logged in"
 end
 
 -- Attempt to login to Amazon Q CLI
 function M.attempt_login()
-  vim.notify("QChat: Starting login process", vim.log.levels.INFO)
+  log("Starting login process", vim.log.levels.INFO)
 
   -- Create a temporary buffer for login
   local login_buf = vim.api.nvim_create_buf(false, true)
@@ -67,7 +85,7 @@ function M.attempt_login()
   -- Start login process in terminal directly
   local login_term_id = vim.fn.termopen(config.login_command, {
     on_exit = function(job_id, exit_code, event_type)
-      vim.notify("QChat: Login process exited with code " .. exit_code, vim.log.levels.INFO)
+      log("Login process exited with code " .. exit_code)
       -- Close the login window after completion
       vim.defer_fn(function()
         if vim.api.nvim_win_is_valid(login_win) then
@@ -77,11 +95,11 @@ function M.attempt_login()
         -- Check login status again
         local is_logged_in, _ = M.check_login()
         if is_logged_in then
-          vim.notify("Successfully logged in to Amazon Q CLI", vim.log.levels.INFO)
+          log("Successfully logged in to Amazon Q CLI", vim.log.levels.INFO)
           -- Try opening Q Chat again
           vim.defer_fn(function() M.open() end, 500)
         else
-          vim.notify("Login failed. Please try again manually with 'q login'", vim.log.levels.ERROR)
+          log("Login failed. Please try again manually with 'q login'", vim.log.levels.ERROR)
         end
       end, 1000)
     end
@@ -95,19 +113,19 @@ end
 
 -- Open Q Chat in a side window
 function M.open()
-  vim.notify("QChat: Opening chat window", vim.log.levels.INFO)
+  log("Opening chat window")
 
   -- Check if Q Chat is already running
   if state.buffer and vim.api.nvim_buf_is_valid(state.buffer) then
-    vim.notify("Q Chat is already running", vim.log.levels.INFO)
+    log("Q Chat is already running")
     return
   end
 
-  vim.notify("QChat: Checking login status", vim.log.levels.INFO)
+  log("Checking login status")
   -- Check login status before proceeding
   local is_logged_in, message = M.check_login()
   if not is_logged_in then
-    vim.notify("QChat: Not logged in, attempting login", vim.log.levels.WARN)
+    log("Not logged in, attempting login", vim.log.levels.WARN)
     -- Always attempt to login automatically
     M.attempt_login()
     return
@@ -142,7 +160,7 @@ function M.open()
   state.term_id = vim.fn.termopen('q chat', {
     on_exit = function(job_id, exit_code, event_type)
       state.term_id = nil
-      vim.notify("Q Chat process exited with code " .. exit_code, vim.log.levels.INFO)
+      log("Q Chat process exited with code " .. exit_code)
     end
   })
 
